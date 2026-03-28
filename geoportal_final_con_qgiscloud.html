@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Geoportal Demo | GeoServer, WMS, ArcGIS, mapa unido y documentos</title>
+  <link rel="icon" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSUlhBpSI8NBXIEjTvPA264F3bcvU5Cp1o2fA&s" />
+  <script type="module" src="https://js.arcgis.com/5.0/embeddable-components/"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v10.4.0/ol.css">
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: rgba(15, 23, 42, 0.78);
+      --panel-soft: rgba(255, 255, 255, 0.06);
+      --line: rgba(255, 255, 255, 0.12);
+      --text: #e5eefc;
+      --muted: #9fb0cc;
+      --primary: #4f9cf9;
+      --primary-strong: #2563eb;
+      --accent: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
+      --radius: 22px;
+      --maxw: 1280px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(37, 99, 235, 0.22), transparent 30%),
+        radial-gradient(circle at top right, rgba(34, 197, 94, 0.12), transparent 25%),
+        linear-gradient(180deg, #07101d 0%, #0b1220 45%, #0f172a 100%);
+      min-height: 100vh;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; display: block; }
+    button, input, select { font: inherit; }
+
+    .container {
+      width: min(calc(100% - 32px), var(--maxw));
+      margin: 0 auto;
+    }
+
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(14px);
+      background: rgba(7, 16, 29, 0.72);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .brand-logo {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #fff;
+      flex: 0 0 auto;
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 1rem;
+      line-height: 1.1;
+      letter-spacing: 0.02em;
+    }
+
+    .brand span {
+      color: var(--muted);
+      display: block;
+      font-size: 0.84rem;
+      margin-top: 2px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .nav-links a {
+      padding: 10px 14px;
+      border-radius: 999px;
+      color: var(--muted);
+      transition: 0.2s ease;
+    }
+
+    .nav-links a:hover,
+    .nav-links a:focus-visible {
+      color: var(--text);
+      background: rgba(255,255,255,0.07);
+      outline: none;
+    }
+
+    .hero {
+      padding: 56px 0 32px;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-card {
+      padding: 34px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-card::after {
+      content: "";
+      position: absolute;
+      inset: auto -60px -60px auto;
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(79,156,249,0.25), transparent 70%);
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(79, 156, 249, 0.12);
+      border: 1px solid rgba(79, 156, 249, 0.22);
+      color: #cfe1ff;
+      font-size: 0.88rem;
+      margin-bottom: 18px;
+    }
+
+    .hero h2 {
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 3.4rem);
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+    }
+
+    .hero p {
+      color: var(--muted);
+      font-size: 1.04rem;
+      line-height: 1.7;
+      margin: 18px 0 0;
+      max-width: 62ch;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 24px;
+    }
+
+    .btn, .chip-btn {
+      border: 0;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 14px 18px;
+      font-weight: 600;
+    }
+
+    .btn-primary {
+      color: white;
+      background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+      box-shadow: 0 14px 28px rgba(37, 99, 235, 0.25);
+    }
+
+    .btn-secondary {
+      color: var(--text);
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--line);
+    }
+
+    .btn:hover, .chip-btn:hover,
+    .btn:focus-visible, .chip-btn:focus-visible {
+      transform: translateY(-1px);
+      outline: none;
+    }
+
+    .stats-card {
+      padding: 24px;
+      display: grid;
+      gap: 16px;
+      align-content: center;
+    }
+
+    .mini-title {
+      margin: 0 0 6px;
+      color: var(--muted);
+      font-size: 0.92rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+    }
+
+    .stat {
+      padding: 16px;
+      border-radius: 18px;
+      background: var(--panel-soft);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 1.5rem;
+      margin-bottom: 6px;
+    }
+
+    .section {
+      padding: 18px 0 28px;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .section-head h3 {
+      margin: 0;
+      font-size: clamp(1.35rem, 2.5vw, 2rem);
+    }
+
+    .section-head p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      max-width: 68ch;
+      line-height: 1.6;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .card {
+      padding: 22px;
+      border-radius: var(--radius);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+    }
+
+    .card-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: rgba(79,156,249,0.12);
+      border: 1px solid rgba(79,156,249,0.2);
+      margin-bottom: 16px;
+      font-size: 1.2rem;
+    }
+
+    .card h4 {
+      margin: 0 0 8px;
+      font-size: 1.08rem;
+    }
+
+    .card p {
+      color: var(--muted);
+      line-height: 1.7;
+      margin: 0 0 18px;
+    }
+
+    .link-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .link-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .viewer {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 18px;
+    }
+
+    .map-panel, .doc-panel, .ol-panel {
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 20px 22px 0;
+    }
+
+    .panel-header h4 {
+      margin: 0;
+      font-size: 1.12rem;
+    }
+
+    .panel-header p {
+      color: var(--muted);
+      line-height: 1.6;
+      margin: 8px 0 0;
+    }
+
+    .map-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 18px 22px 0;
+    }
+
+    .chip-btn {
+      padding: 10px 14px;
+      background: rgba(255,255,255,0.05);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .chip-btn.active {
+      background: linear-gradient(135deg, rgba(79,156,249,0.22), rgba(37,99,235,0.32));
+      border-color: rgba(79,156,249,0.45);
+    }
+
+    .map-wrap,
+    .doc-wrap,
+    .ol-wrap {
+      padding: 18px 22px 22px;
+    }
+
+    .map-frame {
+      border-radius: 18px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: #08101b;
+    }
+
+    #mapa {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      object-fit: cover;
+      background: #dbeafe;
+    }
+
+    .map-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 0.94rem;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(34,197,94,0.12);
+      color: #c8f7d7;
+      border: 1px solid rgba(34,197,94,0.24);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 6px rgba(34,197,94,0.15);
+    }
+
+    .download-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .download-card {
+      padding: 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.04);
+    }
+
+    .download-card strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 0.98rem;
+    }
+
+    .download-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.5;
+      margin-bottom: 10px;
+    }
+
+    .helper-note,
+    .info-note,
+    .result-note {
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.12);
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+
+    .helper-note {
+      background: rgba(245, 158, 11, 0.10);
+      border-color: rgba(245, 158, 11, 0.22);
+      color: #fde7b3;
+    }
+
+    .info-note {
+      background: rgba(79, 156, 249, 0.10);
+      border-color: rgba(79, 156, 249, 0.24);
+      color: #d9e9ff;
+    }
+
+    .result-note {
+      background: rgba(34, 197, 94, 0.10);
+      border-color: rgba(34, 197, 94, 0.22);
+      color: #d4ffe1;
+    }
+
+    iframe {
+      width: 100%;
+      height: 760px;
+      border: 0;
+      border-radius: 18px;
+      background: white;
+    }
+
+    .demo-box {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      padding: 18px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      margin-top: 18px;
+    }
+
+    #demo {
+      margin: 0;
+      color: var(--text);
+      flex: 1 1 280px;
+    }
+
+    .ol-layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .control-card {
+      padding: 18px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      margin-bottom: 14px;
+    }
+
+    .control-card h5 {
+      margin: 0 0 12px;
+      font-size: 1rem;
+    }
+
+    .control-card p {
+      color: var(--muted);
+      margin: 0 0 12px;
+      line-height: 1.6;
+      font-size: 0.94rem;
+    }
+
+    .layer-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .layer-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+    }
+
+    .layer-item label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      flex: 1;
+    }
+
+    .layer-item input[type="checkbox"] {
+      accent-color: var(--primary);
+      width: 16px;
+      height: 16px;
+      margin: 0;
+    }
+
+    .layer-badge {
+      font-size: 0.78rem;
+      color: #cfe1ff;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(79,156,249,0.12);
+      border: 1px solid rgba(79,156,249,0.2);
+      white-space: nowrap;
+    }
+
+    .search-bar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+    }
+
+    .search-bar input {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+    }
+
+    .search-bar input::placeholder {
+      color: #99a8c0;
+    }
+
+    .map-stage {
+      position: relative;
+      min-height: 680px;
+      border-radius: 20px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: #0d1728;
+    }
+
+    #ol-map {
+      width: 100%;
+      height: 680px;
+    }
+
+    .map-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .map-legend span {
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.03);
+    }
+
+    .ol-scale-line {
+      background: rgba(7, 16, 29, 0.72) !important;
+      border-radius: 10px;
+      padding: 6px 8px;
+      bottom: 12px !important;
+      left: 12px !important;
+    }
+
+    .ol-scale-line-inner {
+      border-color: #e5eefc !important;
+      color: #e5eefc !important;
+      font-size: 12px;
+    }
+
+    .custom-marker {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--danger);
+      border: 3px solid white;
+      box-shadow: 0 0 0 8px rgba(239, 68, 68, 0.18);
+    }
+
+    .footer {
+      padding: 30px 0 50px;
+      color: var(--muted);
+    }
+
+    .footer-box {
+      padding: 20px 22px;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 1080px) {
+      .hero-grid,
+      .viewer,
+      .cards,
+      .download-grid,
+      .ol-layout {
+        grid-template-columns: 1fr;
+      }
+
+      iframe { height: 620px; }
+      #ol-map, .map-stage { height: 560px; min-height: 560px; }
+    }
+
+    @media (max-width: 720px) {
+      .nav-inner,
+      .section-head,
+      .footer-box {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .hero-card, .card, .stats-card {
+        padding: 22px;
+      }
+
+      .stat-grid {
+        grid-template-columns: 1fr;
+      }
+
+      #mapa {
+        aspect-ratio: 4 / 3;
+      }
+
+      iframe { height: 520px; }
+      #ol-map, .map-stage { height: 460px; min-height: 460px; }
+      .search-bar { grid-template-columns: 1fr; }
+    }
+
+    .map-unido-canvas {
+      width: 100%;
+      height: 100%;
+      min-height: 610px;
+      border-radius: 18px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+    }
+
+    .map-unido-canvas .ol-viewport,
+    .map-unido-canvas .ol-layer canvas {
+      border-radius: 18px;
+    }
+
+  </style>
+</head>
+<body>
+  <header class="nav" id="top">
+    <div class="container nav-inner">
+      <div class="brand">
+        <div class="brand-logo">
+          <img src="https://www.uasb.edu.bo/wp-content/uploads/2020/10/LOGO-UASB-2.jpg" alt="Logo UASB" />
+        </div>
+        <div>
+          <h1>Geoportal Demo</h1>
+          <span>GeoServer · WMS · WFS · ArcGIS · Mapa unido · Visor documental</span>
+        </div>
+      </div>
+      <nav class="nav-links" aria-label="Navegación principal">
+        <a href="#recursos">Recursos</a>
+        <a href="#visor">Visor</a>
+        <a href="#visor-arcgis">ArcGIS</a>
+        <a href="#mapa-unido">Mapa unido</a>
+        <a href="#visor-qgis">QGIS Cloud</a>
+        <a href="#documentos">Documentos</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container hero-grid">
+        <article class="panel hero-card">
+          <div class="eyebrow">● Prototipo profesional en un único HTML</div>
+          <h2>Visualización y descarga de información geoespacial desde GeoServer</h2>
+          <p>
+            Página demostrativa para consultar servicios geográficos, cambiar capas WMS, descargar datos desde WFS,
+            visualizar documentación técnica embebida y, además, incorporar un visor ArcGIS embebido y un mapa unido basado en OpenLayers dentro del mismo geoportal.
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="#visor-arcgis">Abrir visor ArcGIS</a>
+            <a class="btn btn-secondary" href="https://geoserver.idesinde.com:8443/geoserver/ows?service=wfs&amp;version=2.0.0&amp;request=GetFeature&amp;typeName=sinde:provincias&amp;outputFormat=application%2Fvnd.google-earth.kml%2Bxml" target="_blank" rel="noopener noreferrer">Descargar provincias KML</a>
+          </div>
+
+          <div class="demo-box" aria-live="polite">
+            <p id="demo">Ahora la web mantiene el visor WMS original y añade un visor ArcGIS embebido junto con el mapa unido de OpenLayers.</p>
+            <button class="btn btn-secondary" type="button" onclick="document.getElementById('demo').textContent = 'Integración completada: puedes usar el visor WMS clásico, el visor ArcGIS y el mapa unido en la misma página.';">Probar interacción</button>
+          </div>
+        </article>
+
+        <aside class="panel stats-card">
+          <div>
+            <p class="mini-title">Resumen</p>
+            <h3 style="margin:0; font-size:1.45rem;">Qué incluye esta demo</h3>
+          </div>
+          <div class="stat-grid">
+            <div class="stat">
+              <strong>WMS</strong>
+              <span>Visualización dinámica de capas cartográficas.</span>
+            </div>
+            <div class="stat">
+              <strong>WFS</strong>
+              <span>Descarga directa de información geoespacial en KML.</span>
+            </div>
+            <div class="stat">
+              <strong>ArcGIS</strong>
+              <span>Mapa embebido desde ArcGIS Online / Pro.</span>
+            </div>
+            <div class="stat-item">
+              <strong>Mapa unido</strong>
+              <span>Visor OpenLayers con base OSM y capa GeoServer.</span>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="recursos" class="section">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <h3>Recursos disponibles</h3>
+            <p>Se mantienen los enlaces directos de descarga KML y el visor clásico, y se añaden nuevos apartados con visor ArcGIS embebido y mapa unido.</p>
+          </div>
+        </div>
+
+        <div class="cards">
+          <article class="card">
+            <div class="card-icon">🌐</div>
+            <h4>Sitio institucional</h4>
+            <p>Acceso al portal de la UASB como referencia institucional del proyecto o entorno académico.</p>
+            <div class="link-row">
+              <a class="link-chip" href="https://www.uasb.edu.bo/" target="_blank" rel="noopener noreferrer">Abrir UASB</a>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-icon">⬇️</div>
+            <h4>Descarga KML por capa</h4>
+            <p>Enlaces permanentes para descargar las capas publicadas que también están disponibles en el mapa interactivo.</p>
+            <div class="link-row">
+              <a class="link-chip" href="https://geoserver.idesinde.com:8443/geoserver/ows?service=WFS&amp;version=2.0.0&amp;request=GetFeature&amp;typeName=sinde:poblado&amp;outputFormat=application%2Fvnd.google-earth.kml%2Bxml" target="_blank" rel="noopener noreferrer">Poblados KML</a>
+              <a class="link-chip" href="https://geoserver.idesinde.com:8443/geoserver/ows?service=WFS&amp;version=2.0.0&amp;request=GetFeature&amp;typeName=sinde:via&amp;outputFormat=application%2Fvnd.google-earth.kml%2Bxml" target="_blank" rel="noopener noreferrer">Vías KML</a>
+              <a class="link-chip" href="https://geoserver.idesinde.com:8443/geoserver/ows?service=WFS&amp;version=2.0.0&amp;request=GetFeature&amp;typeName=sinde:provincias&amp;outputFormat=application%2Fvnd.google-earth.kml%2Bxml" target="_blank" rel="noopener noreferrer">Provincias KML</a>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-icon">🧭</div>
+            <h4>Visor ArcGIS embebido</h4>
+            <p>Mapa publicado desde ArcGIS Pro y embebido en la web con leyenda, información y galería de mapas base.</p>
+            <div class="link-row">
+              <a class="link-chip" href="#visor-arcgis">Abrir visor ArcGIS</a>
+              <a class="link-chip" href="#mapa-unido">Abrir mapa unido</a>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="visor" class="section">
+      <div class="container viewer">
+        <article class="panel map-panel">
+          <div class="panel-header">
+            <h4>Visor WMS + descarga KML</h4>
+            <p>Se conserva el visor original para consultas rápidas por capa y descargas KML mediante peticiones WFS.</p>
+          </div>
+
+          <div class="map-toolbar" role="toolbar" aria-label="Selector de capas WMS">
+            <button class="chip-btn active" type="button"
+              onclick="setLayer(this, 'Composición general', 'https://geoserver.idesinde.com:8443/geoserver/sinde/wms?service=WMS&amp;version=1.1.0&amp;request=GetMap&amp;layers=sinde%3AComposicionSinde&amp;bbox=486796.7392569149%2C9434731.642527372%2C1151083.4608458264%2C1.0192994453178741E7&amp;width=800&amp;height=800&amp;srs=EPSG%3A32717&amp;styles=&amp;format=image%2Fpng', '')">Composición</button>
+
+            <button class="chip-btn" type="button"
+              onclick="setLayer(this, 'Poblados', 'https://geoserver.idesinde.com:8443/geoserver/sinde/wms?service=WMS&amp;version=1.1.0&amp;request=GetMap&amp;layers=sinde%3Apoblado&amp;bbox=510485.0064000003%2C9447316.099%2C1148633.2259999998%2C1.01603093E7&amp;width=687&amp;height=768&amp;srs=EPSG%3A32717&amp;styles=&amp;format=image%2Fpng', 'https://geoserver.idesinde.com:8443/geoserver/ows?service=WFS&amp;version=2.0.0&amp;request=GetFeature&amp;typeName=sinde:poblado&amp;outputFormat=application%2Fvnd.google-earth.kml%2Bxml')">Poblados</button>
+
+            <button class="chip-btn" type="button"
+              onclick="setLayer(this, 'Vías', 'https://geoserver.idesinde.com:8443/geoserver/sinde/wms?service=WMS&amp;version=1.1.0&amp;request=GetMap&amp;layers=sinde%3Avia&amp;bbox=491421.0%2C9462016.4237%2C1125413.3671000004%2C1.01505776101E7&amp;width=707&amp;height=768&amp;srs=EPSG%3A32717&amp;styles=&amp;format=image%2Fpng', 'https://geoserver.idesinde.com:8443/geoserver/ows?service=WFS&amp;version=2.0.0&amp;request=GetFeature&amp;typeName=sinde:via&amp;outputFormat=application%2Fvnd.google-earth.kml%2Bxml')">Vías</button>
+
+            <button class="chip-btn" type="button"
+              onclick="setLayer(this, 'Provincias', 'https://geoserver.idesinde.com:8443/geoserver/sinde/wms?service=WMS&amp;version=1.1.0&amp;request=GetMap&amp;layers=sinde%3Aprovincias&amp;bbox=-732143.488300001%2C9445216.3501%2C1147851.6417000005%2C1.01893983531E7&amp;width=768&amp;height=330&amp;srs=EPSG%3A32717&amp;styles=&amp;format=image%2Fpng', 'https://geoserver.idesinde.com:8443/geoserver/ows?service=WFS&amp;version=2.0.0&amp;request=GetFeature&amp;typeName=sinde:provincias&amp;outputFormat=application%2Fvnd.google-earth.kml%2Bxml')">Provincias</button>
+          </div>
+
+          <div class="map-wrap">
+            <div class="map-frame">
+              <img id="mapa" src="https://geoserver.idesinde.com:8443/geoserver/sinde/wms?service=WMS&amp;version=1.1.0&amp;request=GetMap&amp;layers=sinde%3AComposicionSinde&amp;bbox=486796.7392569149%2C9434731.642527372%2C1151083.4608458264%2C1.0192994453178741E7&amp;width=800&amp;height=800&amp;srs=EPSG%3A32717&amp;styles=&amp;format=image%2Fpng" alt="Mapa de composición general servido por GeoServer" />
+            </div>
+
+            <div class="map-meta">
+              <div class="status"><span class="status-dot"></span><span id="layerName">Capa activa: Composición general</span></div>
+              <a id="currentDownloadLink" class="link-chip" href="https://geoserver.idesinde.com:8443/geoserver/ows?service=WFS&amp;version=2.0.0&amp;request=GetFeature&amp;typeName=sinde:provincias&amp;outputFormat=application%2Fvnd.google-earth.kml%2Bxml" target="_blank" rel="noopener noreferrer">Descarga manual actual</a>
+            </div>
+
+            <div class="download-grid">
+              <div class="download-card">
+                <strong>Poblados</strong>
+                <span>Descarga directa en KML de la capa de poblados.</span>
+                <a class="link-chip" href="https://geoserver.idesinde.com:8443/geoserver/ows?service=WFS&amp;version=2.0.0&amp;request=GetFeature&amp;typeName=sinde:poblado&amp;outputFormat=application%2Fvnd.google-earth.kml%2Bxml" target="_blank" rel="noopener noreferrer">Descargar</a>
+              </div>
+              <div class="download-card">
+                <strong>Vías</strong>
+                <span>Descarga directa en KML de la capa de vías.</span>
+                <a class="link-chip" href="https://geoserver.idesinde.com:8443/geoserver/ows?service=WFS&amp;version=2.0.0&amp;request=GetFeature&amp;typeName=sinde:via&amp;outputFormat=application%2Fvnd.google-earth.kml%2Bxml" target="_blank" rel="noopener noreferrer">Descargar</a>
+              </div>
+              <div class="download-card">
+                <strong>Provincias</strong>
+                <span>Descarga directa en KML de la capa de provincias.</span>
+                <a class="link-chip" href="https://geoserver.idesinde.com:8443/geoserver/ows?service=WFS&amp;version=2.0.0&amp;request=GetFeature&amp;typeName=sinde:provincias&amp;outputFormat=application%2Fvnd.google-earth.kml%2Bxml" target="_blank" rel="noopener noreferrer">Descargar</a>
+              </div>
+            </div>
+
+            <div class="helper-note" id="downloadStatus">
+              Nota: algunos navegadores pueden pedir permiso para descargas automáticas múltiples o bloquearlas según la configuración del sitio.
+            </div>
+          </div>
+        </article>
+
+        <article id="documentos" class="panel doc-panel">
+          <div class="panel-header">
+            <h4>Visor de documentación</h4>
+            <p>Integración directa de un documento PDF para consulta sin abandonar la página.</p>
+          </div>
+          <div class="doc-wrap">
+            <iframe src="https://www.geoportaligm.gob.ec/proyecto_nacional/CATALOGO_TEMATICO_IEE_IGM.pdf" title="Catálogo temático IEE IGM"></iframe>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="visor-arcgis" class="section">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <h3>Mapa embebido desde ArcGIS Pro</h3>
+            <p>Se añade un nuevo apartado con el visor publicado en ArcGIS Online para complementar el visor clásico.</p>
+          </div>
+        </div>
+
+        <article class="panel ol-panel">
+          <div class="panel-header">
+            <h4>Visor ArcGIS integrado</h4>
+            <p>Este mapa se carga mediante el componente embebible oficial de ArcGIS, con leyenda, información de capas, galería de mapas base y controles del portal.</p>
+          </div>
+
+          <div class="ol-wrap">
+            <div class="control-card" style="padding: 18px;">
+              <div class="map-stage" style="height: 640px; min-height: 640px; padding: 14px;">
+                <arcgis-embedded-map
+                  style="height:100%;width:100%;border:0;border-radius:18px;overflow:hidden;"
+                  item-id="23045696dccb4cb5896eb9b546b7a734"
+                  theme="dark"
+                  heading-enabled
+                  legend-enabled
+                  information-enabled
+                  basemap-gallery-enabled
+                  time-zone-label-enabled
+                  center="-78.68001984148587,-0.5230599340017155"
+                  scale="2311162.2171545"
+                  portal-url="https://www.arcgis.com">
+                </arcgis-embedded-map>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+
+    <section id="mapa-unido" class="section">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <h3>Mapa unido integrado</h3>
+            <p>Se incorpora el visor del archivo MapaUnido.html con OpenLayers, mapa base OSM y superposición WMS desde GeoServer.</p>
+          </div>
+        </div>
+
+        <article class="panel ol-panel">
+          <div class="panel-header">
+            <h4>Visor OpenLayers del mapa unido</h4>
+            <p>Este apartado reproduce el mapa unido que me enviaste, centrado sobre Ecuador y con la capa <code>sinde:ComposicionSinde</code> publicada en GeoServer.</p>
+          </div>
+
+          <div class="ol-wrap">
+            <div class="control-card" style="padding: 18px;">
+              <div class="map-stage" style="height: 640px; min-height: 640px; padding: 14px;">
+                <div id="js-map" class="map-unido-canvas" aria-label="Mapa unido con OpenLayers"></div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+  
+<section id="visor-qgis" class="section">
+  <div class="container">
+    <div class="section-head">
+      <div>
+        <h3>Mapa publicado desde QGIS Cloud</h3>
+        <p>Visor interactivo publicado desde QGIS mediante el servicio QGIS Cloud.</p>
+      </div>
+    </div>
+
+    <article class="panel ol-panel">
+      <div class="panel-header">
+        <h4>Visor QGIS Cloud integrado</h4>
+        <p>Este mapa proviene de un proyecto publicado desde QGIS utilizando QGIS Cloud y se integra mediante un iframe.</p>
+      </div>
+
+      <div class="ol-wrap">
+        <div class="control-card" style="padding:18px;">
+          <div class="map-stage" style="height:640px; min-height:640px; padding:14px;">
+            <iframe 
+              src="https://qgiscloud.com/izaringulis/PracticaCloud/?l=via_l%2Cpoblado_p%2Cradiacionsierra%2Cnxprovincias%2COpenStreetMap&t=PracticaCloud&e=-9977448%2C-786400%2C-7437448%2C418777"
+              title="Mapa QGIS Cloud"
+              style="width:100%;height:100%;border:0;border-radius:18px;">
+            </iframe>
+          </div>
+        </div>
+      </div>
+    </article>
+  </div>
+</section>
+
+</main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-box">
+        <div>
+          <strong style="display:block; color: var(--text); margin-bottom: 6px;">Geoportal Demo</strong>
+          <span>Ejemplo de presentación web en un solo archivo HTML con visualización WMS, descarga KML, visor ArcGIS integrado y mapa unido.</span>
+        </div>
+        <a class="link-chip" href="#top" onclick="window.scrollTo({top: 0, behavior: 'smooth'}); return false;">Volver arriba</a>
+      </div>
+    </div>
+  </footer>
+
+  <iframe id="downloadFrame" class="sr-only" title="Descarga oculta"></iframe>
+  
+
+  <script src="https://cdn.jsdelivr.net/npm/ol@v10.4.0/dist/ol.js"></script>
+  <script>
+    function initMapaUnido() {
+      const target = document.getElementById('js-map');
+      if (!target || typeof ol === 'undefined') return;
+
+      const map = new ol.Map({
+        view: new ol.View({
+          center: ol.proj.transform([-78.5, -0.25], 'EPSG:4326', 'EPSG:3857'),
+          zoom: 8
+        }),
+        layers: [
+          new ol.layer.Tile({
+            source: new ol.source.OSM()
+          })
+        ],
+        target: 'js-map'
+      });
+
+      const geoserver = new ol.layer.Tile({
+        source: new ol.source.TileWMS({
+          url: 'https://geoserver.idesinde.com:8443/geoserver/ows?',
+          params: {
+            LAYERS: 'sinde:ComposicionSinde',
+            FORMAT: 'image/png',
+            TRANSPARENT: true
+          },
+          attributions: '<a href="https://geoserver.idesinde.com:8443/geoserver/web/" target="_blank" rel="noopener noreferrer">IDESINDE</a>'
+        })
+      });
+
+      map.addLayer(geoserver);
+    }
+
+    document.addEventListener('DOMContentLoaded', initMapaUnido);
+  </script>
+
+  <script>
+    function triggerKmlDownload(downloadUrl, label) {
+      if (!downloadUrl) return;
+
+      const frame = document.getElementById('downloadFrame');
+      const status = document.getElementById('downloadStatus');
+      frame.src = downloadUrl;
+      if (status) {
+        status.textContent = `Descarga iniciada para ${label}. Si tu navegador bloquea la descarga automática, usa el enlace manual.`;
+      }
+    }
+
+    function setLayer(button, label, imageUrl, downloadUrl) {
+      const image = document.getElementById('mapa');
+      const layerName = document.getElementById('layerName');
+      const currentDownloadLink = document.getElementById('currentDownloadLink');
+      const buttons = document.querySelectorAll('.map-toolbar .chip-btn');
+
+      image.src = imageUrl;
+      image.alt = `Mapa de la capa ${label} servido por GeoServer`;
+      layerName.textContent = `Capa activa: ${label}`;
+
+      buttons.forEach(btn => btn.classList.remove('active'));
+      button.classList.add('active');
+
+      if (downloadUrl) {
+        currentDownloadLink.href = downloadUrl;
+        currentDownloadLink.style.pointerEvents = 'auto';
+        currentDownloadLink.style.opacity = '1';
+        triggerKmlDownload(downloadUrl, label);
+      } else {
+        currentDownloadLink.removeAttribute('href');
+        currentDownloadLink.style.pointerEvents = 'none';
+        currentDownloadLink.style.opacity = '0.6';
+        const status = document.getElementById('downloadStatus');
+        if (status) {
+          status.textContent = `La capa ${label} no tiene descarga KML automática asociada en este visor.`;
+        }
+      }
+    }
+  </script>
+</body>
+</html>
